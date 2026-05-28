@@ -6,3 +6,4 @@ test-artifacts/
 release/
 *.exe
 *.yml
+.chrome-codex-profile/

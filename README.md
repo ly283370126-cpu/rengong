@@ -21,6 +21,30 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
+## Chrome automation
+
+Start a separate controllable Chrome window:
+
+```bash
+npm run chrome:start
+```
+
+Check the connected page:
+
+```bash
+npm run chrome:status
+```
+
+Navigate, click, or type through the Chrome DevTools Protocol:
+
+```bash
+npm run chrome:goto -- --url=https://www.google.com
+npm run chrome:click -- --selector="button"
+npm run chrome:type -- --selector="input[name=q]" --text="hello"
+```
+
+By default this uses `CHROME_DEBUG_PORT=9222`, `CHROME_PROXY=http://127.0.0.1:7892`, and a separate `.chrome-codex-profile/` user data directory so the normal Chrome profile is left alone.
+
 打开：
 
 ```text

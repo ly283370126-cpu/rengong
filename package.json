@@ -13,6 +13,12 @@
     "build": "npm run check && vite build",
     "build:desktop": "npm run build && electron-builder --win portable",
     "start": "tsx src/server/index.ts",
+    "chrome:start": "tsx scripts/chrome-control.ts start",
+    "chrome:stop": "tsx scripts/chrome-control.ts stop",
+    "chrome:status": "tsx scripts/chrome-control.ts status",
+    "chrome:goto": "tsx scripts/chrome-control.ts goto",
+    "chrome:click": "tsx scripts/chrome-control.ts click",
+    "chrome:type": "tsx scripts/chrome-control.ts type",
     "test:smoke": "tsx scripts/smoke.ts",
     "doctor": "tsx scripts/doctor.ts"
   },
