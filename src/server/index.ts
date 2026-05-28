@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { buildRealtimeSessionConfig } from "../lib/assistantPrompt";
+import { openaiFetch, openaiNetworkStatus } from "./openaiClient";
 import { allowedApps, executeTool, urlShortcuts } from "./tools";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,11 +71,15 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.text({ type: "application/sdp", limit: "2mb" }));
 
 app.get("/api/health", (_req, res) => {
+  const network = openaiNetworkStatus();
+
   res.json({
     ok: true,
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
     realtimeModel: realtimeModel(),
     voice: realtimeVoice(),
+    openaiProxyConfigured: network.proxyConfigured,
+    openaiProxyEnv: network.proxyEnv,
     allowedApps: Object.keys(allowedApps),
     shortcuts: Object.keys(urlShortcuts),
     envPath,
@@ -120,11 +125,13 @@ app.post("/api/config/test-openai", async (_req, res) => {
     return;
   }
 
-  const response = await fetch("https://api.openai.com/v1/models", {
+  const response = await openaiFetch("https://api.openai.com/v1/models", {
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }
   });
   if (!response.ok) {
-    const payload = await response.json().catch(() => null);
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
     res.status(400).json({
       ok: false,
       status: response.status,
@@ -158,7 +165,7 @@ app.post("/api/realtime/calls", async (req, res) => {
   form.set("sdp", req.body);
   form.set("session", JSON.stringify(buildRealtimeSessionConfig(realtimeModel(), realtimeVoice())));
 
-  const openaiResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
+  const openaiResponse = await openaiFetch("https://api.openai.com/v1/realtime/calls", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`

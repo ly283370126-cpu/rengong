@@ -26,6 +26,8 @@ export interface AppStatus {
   shortcuts: string[];
   envPath?: string;
   keyStatus?: "missing" | "present";
+  openaiProxyConfigured?: boolean;
+  openaiProxyEnv?: "HTTPS_PROXY" | "HTTP_PROXY" | "ALL_PROXY" | null;
 }
 
 export interface AppConfig {

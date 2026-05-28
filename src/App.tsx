@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, CircleSlash2 } from "lucide-react";
 import { ControlDock } from "./components/ControlDock";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { EventLog } from "./components/EventLog";
+import { JarvisHud } from "./components/JarvisHud";
 import { ParticleOrb } from "./components/ParticleOrb";
 import { useAudioLevel } from "./hooks/useAudioLevel";
 import { useLocalDemo } from "./hooks/useLocalDemo";
@@ -26,7 +27,7 @@ export default function App() {
   const [appStatus, setAppStatus] = useState<AppStatus | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([
-    createLog("system", "项目已启动。Local Demo 可直接体验；Realtime 需要配置 OPENAI_API_KEY。")
+    createLog("system", "Core online. Local demo is ready; Realtime activates when OpenAI is configured.")
   ]);
 
   const addLog = useCallback((entry: Omit<LogEntry, "id" | "at">) => {
@@ -98,7 +99,7 @@ export default function App() {
 
       if (!appStatus?.openaiConfigured) {
         setStatus("error");
-        addLog({ role: "system", text: "Realtime 需要 OPENAI_API_KEY。已保留 Local Demo 可用。" });
+        addLog({ role: "system", text: "Realtime needs OPENAI_API_KEY. Local demo remains available." });
         return;
       }
 
@@ -128,7 +129,7 @@ export default function App() {
       }
 
       if (!realtime.active) {
-        addLog({ role: "system", text: "请先启动 Realtime，再发送文字或直接说话。" });
+        addLog({ role: "system", text: "Start Realtime before sending text or speaking." });
         return;
       }
 
@@ -151,12 +152,21 @@ export default function App() {
       <ParticleOrb status={status} audioLevel={visualLevel} audioAnalysis={visualAnalysis} />
 
       <div className="ambient-grid" aria-hidden="true" />
+      <JarvisHud
+        mode={mode}
+        status={status}
+        openaiConfigured={Boolean(appStatus?.openaiConfigured)}
+        active={active}
+        model={appStatus?.realtimeModel}
+        voice={appStatus?.voice}
+      />
+
       <header className="top-bar">
         <div className="brand-lockup">
-          <span className="brand-mark">VO</span>
+          <span className="brand-mark">J</span>
           <div>
-            <strong>Voice Orb Assistant</strong>
-            <span>Realtime voice agent</span>
+            <strong>JARVIS DESKTOP</strong>
+            <span>Realtime neural interface</span>
           </div>
         </div>
         <div className="system-state">
@@ -166,9 +176,9 @@ export default function App() {
       </header>
 
       <section className="hero-copy" aria-label="Assistant identity">
-        <p>STARLING LOCAL</p>
-        <h1>星灵</h1>
-        <span>低延迟语音、工具调用、粒子可视化。</span>
+        <p>JARVIS LOCAL</p>
+        <h1>Core</h1>
+        <span>Low-latency voice, tools, and particle intelligence.</span>
       </section>
 
       <EventLog entries={logs} />
@@ -193,7 +203,7 @@ export default function App() {
       {!appStatus?.openaiConfigured && (
         <div className="config-note" role="status">
           <AlertTriangle size={16} />
-          <span>真实 Realtime 需要复制 .env.example 为 .env 并填写 OPENAI_API_KEY。</span>
+          <span>Realtime needs OPENAI_API_KEY in .env.</span>
         </div>
       )}
     </main>

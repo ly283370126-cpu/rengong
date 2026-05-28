@@ -65,10 +65,15 @@ start-desktop.cmd
 编辑 `.env`：
 
 ```env
-OPENAI_API_KEY=你的_key
+OPENAI_API_KEY=你的_key_不要提交到仓库
 OPENAI_REALTIME_MODEL=gpt-realtime
 OPENAI_REALTIME_VOICE=marin
+# 如果本机访问 OpenAI 需要代理，可以按需启用：
+# HTTPS_PROXY=http://127.0.0.1:7892
+# HTTP_PROXY=http://127.0.0.1:7892
 ```
+
+`OPENAI_REALTIME_MODEL` 和 `OPENAI_REALTIME_VOICE` 可以按当前 OpenAI Realtime 支持的模型与声音调整。本地代理用户只需要配置 `HTTPS_PROXY`/`HTTP_PROXY`，不要把真实 Key 写进 `.env.example` 或提交到仓库。
 
 然后重启：
 

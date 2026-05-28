@@ -42,7 +42,7 @@ export function ControlDock({
 }: ControlDockProps) {
   return (
     <section className="control-shell" aria-label="Voice assistant controls">
-      <div className="mode-row" role="tablist" aria-label="运行模式">
+      <div className="mode-row" role="tablist" aria-label="Mode">
         <button
           className={mode === "demo" ? "mode-button is-active" : "mode-button"}
           type="button"
@@ -50,19 +50,19 @@ export function ControlDock({
           aria-pressed={mode === "demo"}
         >
           <Bot size={16} />
-          <span>Local Demo</span>
+          <span>Local demo</span>
         </button>
         <button
           className={mode === "realtime" ? "mode-button is-active" : "mode-button"}
           type="button"
           onClick={() => onModeChange("realtime")}
           aria-pressed={mode === "realtime"}
-          title={openaiConfigured ? "使用 OpenAI Realtime" : "需要在 .env 配置 OPENAI_API_KEY"}
+          title={openaiConfigured ? "Use OpenAI Realtime" : "Add OPENAI_API_KEY in .env"}
         >
           <Radio size={16} />
           <span>Realtime</span>
         </button>
-        <button className="icon-mode-button" type="button" onClick={onSettings} aria-label="打开配置" title="配置">
+        <button className="icon-mode-button" type="button" onClick={onSettings} aria-label="Open settings" title="Settings">
           <Settings size={16} />
         </button>
       </div>
@@ -99,42 +99,42 @@ export function ControlDock({
         <input
           value={command}
           onChange={(event) => onCommandChange(event.target.value)}
-          placeholder="输入一句话测试：今天是什么日子？"
-          aria-label="测试文字指令"
+          placeholder="Type a test command, e.g. What day is it?"
+          aria-label="Test command"
         />
         <button type="submit" disabled={!command.trim()}>
-          发送
+          Send
         </button>
       </form>
 
-      <div className="quick-row" aria-label="快捷测试">
+      <div className="quick-row" aria-label="Quick tests">
         <button type="button" onClick={() => onQuick("星灵，在吗？")}>
           <Radio size={15} />
-          <span>唤醒</span>
+          <span>Wake</span>
         </button>
         <button type="button" onClick={() => onQuick("你的名字是什么？")}>
           <Bot size={15} />
-          <span>名字</span>
+          <span>Name</span>
         </button>
         <button type="button" onClick={() => onQuick("今天是什么日子？")}>
           <CalendarClock size={15} />
-          <span>日期</span>
+          <span>Date</span>
         </button>
         <button type="button" onClick={() => onQuick("帮我打开百度。")}>
           <Globe2 size={15} />
-          <span>百度</span>
+          <span>Baidu</span>
         </button>
         <button type="button" onClick={() => onQuick("帮我打开计算器。")}>
           <Calculator size={15} />
-          <span>计算器</span>
+          <span>Calculator</span>
         </button>
         <button type="button" onClick={() => onQuick("帮我打开记事本。")}>
           <TerminalSquare size={15} />
-          <span>记事本</span>
+          <span>Notepad</span>
         </button>
         <button type="button" onClick={() => onQuick("帮我搜索 OpenAI Realtime。")}>
           <Globe2 size={15} />
-          <span>搜索</span>
+          <span>Search</span>
         </button>
       </div>
     </section>
