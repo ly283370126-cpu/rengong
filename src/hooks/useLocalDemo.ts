@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssistantStatus, LogEntry, ToolName } from "../types/realtime";
+import type { AssistantStatus, LogEntry, ToolName, ToolResult } from "../types/realtime";
 
 interface DemoOptions {
   onStatus(status: AssistantStatus): void;
   addLog(entry: Omit<LogEntry, "id" | "at">): void;
-}
-
-function hasSpeechSynthesis() {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
 }
 
 type BrowserSpeechRecognition = {
@@ -37,6 +33,29 @@ type RecognitionEventLike = {
   };
 };
 
+const shortcuts = [
+  { pattern: /baidu|百度/i, shortcut: "baidu", label: "Baidu" },
+  { pattern: /bilibili|b站|B站/i, shortcut: "bilibili", label: "Bilibili" },
+  { pattern: /douyin|抖音/i, shortcut: "douyin", label: "Douyin" },
+  { pattern: /github/i, shortcut: "github", label: "GitHub" },
+  { pattern: /openai/i, shortcut: "openai", label: "OpenAI docs" },
+  { pattern: /google|谷歌/i, shortcut: "google", label: "Google" },
+  { pattern: /bing|必应/i, shortcut: "bing", label: "Bing" }
+];
+
+const apps = [
+  { pattern: /calculator|计算器/i, app: "calculator", label: "Calculator" },
+  { pattern: /notepad|记事本/i, app: "notepad", label: "Notepad" },
+  { pattern: /paint|画图/i, app: "paint", label: "Paint" },
+  { pattern: /chrome|谷歌浏览器|浏览器/i, app: "chrome", label: "Chrome" },
+  { pattern: /edge/i, app: "edge", label: "Microsoft Edge" },
+  { pattern: /wechat|微信/i, app: "wechat", label: "WeChat" }
+];
+
+function hasSpeechSynthesis() {
+  return typeof window !== "undefined" && "speechSynthesis" in window;
+}
+
 function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
   const speechWindow = window as unknown as {
     SpeechRecognition?: SpeechRecognitionConstructor;
@@ -49,14 +68,30 @@ function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function executeTool(name: ToolName, args: Record<string, unknown>) {
+function normalize(text: string) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+function stripCommandWords(text: string) {
+  return normalize(
+    text
+      .replace(/jarvis|javis|贾维斯|星灵/gi, "")
+      .replace(/please|帮我|请|一下|打开|搜索|查一下|查一查|查|look up|search for/gi, "")
+  );
+}
+
+async function executeTool(name: ToolName, args: Record<string, unknown>): Promise<ToolResult> {
   const response = await fetch("/api/tools/execute", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, arguments: args })
   });
 
-  return response.json();
+  return response.json() as Promise<ToolResult>;
+}
+
+function toolSummary(tool: ToolResult, success: string) {
+  return tool.ok ? success : `工具调用失败：${tool.error ?? "未知错误"}。`;
 }
 
 export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
@@ -93,9 +128,7 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
     }
 
     const SpeechRecognition = getSpeechRecognitionConstructor();
-    if (!SpeechRecognition) {
-      return false;
-    }
+    if (!SpeechRecognition) return false;
 
     const recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
@@ -108,9 +141,7 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
         if (result?.isFinal) finalText += result[0]?.transcript ?? "";
       }
       const cleaned = finalText.trim();
-      if (cleaned) {
-        void submitRef.current(cleaned);
-      }
+      if (cleaned) void submitRef.current(cleaned);
     };
     recognition.onerror = (event) => {
       if (event.error && event.error !== "no-speech") {
@@ -146,7 +177,7 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
       stopRecognition();
 
       if (!hasSpeechSynthesis()) {
-        await wait(Math.min(2600, Math.max(900, text.length * 95)));
+        await wait(Math.min(2800, Math.max(900, text.length * 70)));
         speakingRef.current = false;
         if (shouldListenRef.current) startRecognitionRef.current();
         onStatus("listening");
@@ -155,9 +186,9 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
 
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "zh-CN";
+        utterance.lang = /[\u4e00-\u9fff]/.test(text) ? "zh-CN" : "en-US";
         utterance.rate = 1.02;
-        utterance.pitch = 1.02;
+        utterance.pitch = 0.92;
         utterance.onend = () => resolve();
         utterance.onerror = () => resolve();
         utteranceRef.current = utterance;
@@ -179,9 +210,12 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
     onStatus("listening");
     const recognitionStarted = startRecognitionRef.current();
     if (!recognitionStarted) {
-      addLog({ role: "system", text: "当前浏览器没有可用的本地语音识别，可以用文字框和快捷按钮测试。" });
+      addLog({
+        role: "system",
+        text: "当前浏览器没有可用的本地语音识别；文字指令和快捷动作仍然在线。"
+      });
     }
-    await speak("你好，我是星灵。你可以直接说话，也可以问日期，或者让我打开百度、B站、计算器和记事本。");
+    await speak("系统已上线。我可以打开应用和网页、搜索信息、读取时间、草拟日程，并调度本地工具。");
   }, [addLog, onStatus, speak]);
 
   const stop = useCallback(() => {
@@ -189,9 +223,7 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
     activeRef.current = false;
     speakingRef.current = false;
     stopRecognition();
-    if (hasSpeechSynthesis()) {
-      window.speechSynthesis.cancel();
-    }
+    if (hasSpeechSynthesis()) window.speechSynthesis.cancel();
     utteranceRef.current = null;
     setActive(false);
     onStatus("idle");
@@ -199,7 +231,7 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
 
   const submit = useCallback(
     async (raw: string) => {
-      const text = raw.trim();
+      const text = normalize(raw);
       if (!text) return;
 
       if (!activeRef.current) {
@@ -210,101 +242,77 @@ export function useLocalDemo({ onStatus, addLog }: DemoOptions) {
 
       addLog({ role: "user", text });
       onStatus("thinking");
-      await wait(280);
+      await wait(220);
 
-      if (/星灵|醒醒|在吗/.test(text)) {
-        await speak("我在。你说。");
+      if (/jarvis|javis|贾维斯|星灵|醒醒|在吗|hello|hi/i.test(text)) {
+        await speak("我在。告诉我要打开什么、搜索什么、安排什么，或者让我分析下一步。");
         return;
       }
 
-      if (/名字|叫/.test(text)) {
-        await speak("我叫星灵，是你的实时语音 AI 助手。");
+      if (/name|名字|你是谁|who are you/i.test(text)) {
+        await speak("你可以叫我贾维斯桌面版。本地核心负责工具调度，Realtime 会接入完整模型能力。");
         return;
       }
 
-      if (/今天|日期|星期|几点|时间/.test(text)) {
+      if (/help|capabilities|能力|能做什么|帮助/i.test(text)) {
+        await speak("我可以听你说话、语音回应、打开白名单应用和网页、搜索、读取本地时间，并创建日程草稿。");
+        return;
+      }
+
+      if (/today|date|time|day|现在|今天|日期|时间|星期|几点/i.test(text)) {
         onStatus("executing_tool");
         const tool = await executeTool("get_current_date", {});
         addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(`现在是${tool.result?.zhCN ?? "我没能读取到时间"}。`);
+        const result = tool.result as { zhCN?: string } | undefined;
+        await speak(tool.ok ? `现在是${result?.zhCN ?? "本地时间已读取，但解析不完整"}。` : toolSummary(tool, ""));
         return;
       }
 
-      if (/百度/.test(text)) {
+      const shortcut = shortcuts.find((item) => item.pattern.test(text));
+      if (shortcut && /open|打开|进入|launch/i.test(text)) {
         onStatus("executing_tool");
-        const tool = await executeTool("open_url", { shortcut: "baidu" });
+        const tool = await executeTool("open_url", { shortcut: shortcut.shortcut });
         addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "百度已经打开了。" : `打开失败：${tool.error}`);
+        await speak(toolSummary(tool, `${shortcut.label} 已打开。`));
         return;
       }
 
-      if (/B站|哔哩|bilibili/i.test(text)) {
+      const app = apps.find((item) => item.pattern.test(text));
+      if (app && /open|打开|launch|启动/i.test(text)) {
         onStatus("executing_tool");
-        const tool = await executeTool("open_url", { shortcut: "bilibili" });
+        const tool = await executeTool("open_app", { app: app.app });
         addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "B站已经打开了。" : `打开失败：${tool.error}`);
+        await speak(toolSummary(tool, `${app.label} 已打开。`));
         return;
       }
 
-      if (/计算器/.test(text)) {
+      if (/search|look up|google|bing|搜索|查询|查一下|查一查/i.test(text)) {
+        const query = stripCommandWords(text) || text;
         onStatus("executing_tool");
-        const tool = await executeTool("open_app", { app: "calculator" });
+        const tool = await executeTool("search_web", { query, engine: "bing" });
         addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "计算器已经打开了。" : `打开失败：${tool.error}`);
+        await speak(toolSummary(tool, `我已打开关于「${query}」的搜索结果。`));
         return;
       }
 
-      if (/记事本/.test(text)) {
+      if (/calendar|schedule|meeting|reminder|日程|提醒|会议/i.test(text)) {
         onStatus("executing_tool");
-        const tool = await executeTool("open_app", { app: "notepad" });
+        const title = stripCommandWords(text) || "Jarvis task";
+        const tool = await executeTool("create_calendar_event", {
+          title,
+          notes: "由贾维斯桌面版本地核心创建。"
+        });
         addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "记事本已经打开了。" : `打开失败：${tool.error}`);
+        await speak(toolSummary(tool, "我已打开日程草稿。确认时间后保存即可。"));
         return;
       }
 
-      if (/微信/.test(text)) {
-        onStatus("executing_tool");
-        const tool = await executeTool("open_app", { app: "wechat" });
-        addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "微信已经打开了。" : `打开失败：${tool.error}`);
+      if (/thanks|thank you|谢谢|感谢/i.test(text)) {
+        await speak("随时待命。");
         return;
       }
 
-      if (/浏览器|Chrome|谷歌浏览器/i.test(text)) {
-        onStatus("executing_tool");
-        const tool = await executeTool("open_app", { app: "chrome" });
-        addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "浏览器已经打开了。" : `打开失败：${tool.error}`);
-        return;
-      }
-
-      if (/搜索|查一下|搜一下/.test(text)) {
-        const query = text
-          .replace(/星灵/g, "")
-          .replace(/帮我/g, "")
-          .replace(/搜索|查一下|搜一下/g, "")
-          .trim();
-        onStatus("executing_tool");
-        const tool = await executeTool("search_web", { query: query || text, engine: "bing" });
-        addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "搜索结果已经打开了。" : `搜索失败：${tool.error}`);
-        return;
-      }
-
-      if (/日程|提醒|会议/.test(text)) {
-        onStatus("executing_tool");
-        const tool = await executeTool("create_calendar_event", { title: text, notes: "由星灵创建" });
-        addLog({ role: "tool", text: JSON.stringify(tool.result ?? tool.error) });
-        await speak(tool.ok ? "日程创建页面已经打开了，你可以确认时间后保存。" : `日程失败：${tool.error}`);
-        return;
-      }
-
-      if (/谢谢|感谢/.test(text)) {
-        await speak("不用客气，有需要随时叫我。");
-        return;
-      }
-
-      await speak("这条我先用本地演示模式回答：收到。配好 OpenAI Key 后，我就能进行真正的实时 AI 对话。");
+      await speak("本地核心已收到。配置有效的 OpenAI Key 后，我可以进入更深入的实时推理模式。");
     },
     [addLog, onStatus, speak]
   );

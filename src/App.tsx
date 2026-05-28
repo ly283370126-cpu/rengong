@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleSlash2 } from "lucide-react";
 import { ControlDock } from "./components/ControlDock";
 import { ConfigPanel } from "./components/ConfigPanel";
+import { CognitivePanel } from "./components/CognitivePanel";
 import { EventLog } from "./components/EventLog";
 import { JarvisHud } from "./components/JarvisHud";
 import { ParticleOrb } from "./components/ParticleOrb";
@@ -27,7 +28,7 @@ export default function App() {
   const [appStatus, setAppStatus] = useState<AppStatus | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([
-    createLog("system", "Core online. Local demo is ready; Realtime activates when OpenAI is configured.")
+    createLog("system", "核心已上线。本地中文助手可用；配置有效 OpenAI Key 后启用 Realtime。")
   ]);
 
   const addLog = useCallback((entry: Omit<LogEntry, "id" | "at">) => {
@@ -99,7 +100,7 @@ export default function App() {
 
       if (!appStatus?.openaiConfigured) {
         setStatus("error");
-        addLog({ role: "system", text: "Realtime needs OPENAI_API_KEY. Local demo remains available." });
+        addLog({ role: "system", text: "Realtime 需要 OPENAI_API_KEY；本地中文核心仍可使用。" });
         return;
       }
 
@@ -129,7 +130,7 @@ export default function App() {
       }
 
       if (!realtime.active) {
-        addLog({ role: "system", text: "Start Realtime before sending text or speaking." });
+        addLog({ role: "system", text: "请先启动 Realtime，再发送文字或直接说话。" });
         return;
       }
 
@@ -166,7 +167,7 @@ export default function App() {
           <span className="brand-mark">J</span>
           <div>
             <strong>JARVIS DESKTOP</strong>
-            <span>Realtime neural interface</span>
+          <span>Realtime neural interface</span>
           </div>
         </div>
         <div className="system-state">
@@ -178,10 +179,16 @@ export default function App() {
       <section className="hero-copy" aria-label="Assistant identity">
         <p>JARVIS LOCAL</p>
         <h1>Core</h1>
-        <span>Low-latency voice, tools, and particle intelligence.</span>
+        <span>中文语音、工具调度、实时粒子智能核心。</span>
       </section>
 
       <EventLog entries={logs} />
+      <CognitivePanel
+        entries={logs}
+        openaiConfigured={Boolean(appStatus?.openaiConfigured)}
+        proxyConfigured={appStatus?.openaiProxyConfigured}
+        active={active}
+      />
 
       <ControlDock
         mode={mode}
@@ -203,7 +210,7 @@ export default function App() {
       {!appStatus?.openaiConfigured && (
         <div className="config-note" role="status">
           <AlertTriangle size={16} />
-          <span>Realtime needs OPENAI_API_KEY in .env.</span>
+          <span>Realtime 需要在 .env 中配置 OPENAI_API_KEY。</span>
         </div>
       )}
     </main>

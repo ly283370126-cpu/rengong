@@ -15,6 +15,12 @@ interface ConfigPayload {
   envPath: string;
 }
 
+type ConfigResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+};
+
 export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
   const [config, setConfig] = useState<ConfigPayload | null>(null);
   const [key, setKey] = useState("");
@@ -34,7 +40,7 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
         setVoice(payload.realtimeVoice);
         setKey("");
       })
-      .catch(() => setMessage("读取配置失败。"));
+      .catch(() => setMessage("Unable to read local configuration."));
   }, [open]);
 
   if (!open) return null;
@@ -52,9 +58,9 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
           realtimeVoice: voice
         })
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "保存失败");
-      setMessage("配置已保存。");
+      const payload = (await response.json()) as ConfigResponse;
+      if (!response.ok) throw new Error(payload.error ?? "Save failed");
+      setMessage("Configuration saved locally.");
       setKey("");
       onSaved();
     } catch (error) {
@@ -70,8 +76,8 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
     try {
       if (key.trim()) await save();
       const response = await fetch("/api/config/test-openai", { method: "POST" });
-      const payload = await response.json();
-      setMessage(payload.message ?? (payload.ok ? "Key 可用。" : "Key 不可用。"));
+      const payload = (await response.json()) as ConfigResponse;
+      setMessage(payload.message ?? (payload.ok ? "Key is usable." : "Key is not usable."));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -80,14 +86,14 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
   }
 
   return (
-    <div className="config-backdrop" role="dialog" aria-modal="true" aria-label="配置">
+    <div className="config-backdrop" role="dialog" aria-modal="true" aria-label="Assistant settings">
       <section className="config-panel">
         <div className="config-panel-header">
           <div>
             <Settings size={18} />
             <strong>Assistant Settings</strong>
           </div>
-          <button type="button" onClick={onClose} aria-label="关闭配置">
+          <button type="button" onClick={onClose} aria-label="Close settings">
             <X size={18} />
           </button>
         </div>
@@ -100,7 +106,7 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
               type="password"
               value={key}
               onChange={(event) => setKey(event.target.value)}
-              placeholder={config?.openaiConfigured ? `已配置：${config.openaiApiKeyMasked}` : "粘贴 sk-..."}
+              placeholder={config?.openaiConfigured ? `Configured: ${config.openaiApiKeyMasked}` : "Paste sk-..."}
               autoComplete="off"
             />
           </div>
@@ -126,10 +132,10 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
 
         <div className="config-actions">
           <button type="button" onClick={() => void testKey()} disabled={busy}>
-            测试 Key
+            Test key
           </button>
           <button type="button" onClick={() => void save()} disabled={busy}>
-            保存配置
+            Save settings
           </button>
         </div>
       </section>
