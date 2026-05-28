@@ -1,18 +1,18 @@
 :root {
-  color: #eef8ff;
-  background: #02070c;
+  color: #dceff6;
+  background: #000305;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --cyan: #6eeaff;
-  --mint: #6ef6c8;
-  --amber: #ffc85a;
-  --rose: #ff6f9f;
-  --panel: rgba(4, 14, 22, 0.72);
-  --border: rgba(128, 236, 255, 0.28);
+  --cyan: #9ad7e5;
+  --mint: #86bfc5;
+  --amber: #8ab6c8;
+  --rose: #c8e8ef;
+  --panel: rgba(1, 8, 12, 0.72);
+  --border: rgba(128, 202, 224, 0.2);
 }
 
 * {
@@ -41,8 +41,31 @@ button {
   min-height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 62%, rgba(18, 205, 188, 0.18), transparent 28rem),
-    linear-gradient(120deg, #02070c 0%, #07121a 48%, #030409 100%);
+    radial-gradient(circle at 50% 72%, rgba(29, 93, 105, 0.28), transparent 18rem),
+    radial-gradient(circle at 50% 43%, rgba(19, 47, 58, 0.2), transparent 26rem),
+    linear-gradient(180deg, #000000 0%, #01060a 21%, #02080c 56%, #000000 100%);
+}
+
+.app-shell::before,
+.app-shell::after {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  content: "";
+}
+
+.app-shell::before {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 20%, transparent 76%, rgba(0, 0, 0, 0.56)),
+    radial-gradient(circle at 50% 50%, transparent 0, transparent 32%, rgba(0, 0, 0, 0.52) 84%);
+}
+
+.app-shell::after {
+  opacity: 0.12;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 100% 3px;
+  mix-blend-mode: soft-light;
 }
 
 .orb-stage {
@@ -62,7 +85,7 @@ button {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.36;
+  opacity: 0.09;
   background-image:
     linear-gradient(rgba(110, 234, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(110, 234, 255, 0.045) 1px, transparent 1px);
@@ -73,14 +96,20 @@ button {
 .top-bar {
   position: fixed;
   z-index: 4;
-  top: 22px;
+  top: 18px;
   left: 26px;
   right: 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  opacity: 0.28;
   pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.top-bar:hover {
+  opacity: 0.86;
 }
 
 .brand-lockup,
@@ -89,8 +118,8 @@ button {
   display: flex;
   align-items: center;
   min-height: 42px;
-  border: 1px solid rgba(110, 234, 255, 0.18);
-  background: rgba(3, 11, 17, 0.42);
+  border: 1px solid rgba(126, 180, 196, 0.14);
+  background: rgba(2, 8, 12, 0.3);
   backdrop-filter: blur(16px);
 }
 
@@ -106,8 +135,8 @@ button {
   height: 31px;
   place-items: center;
   border-radius: 6px;
-  color: #061014;
-  background: linear-gradient(135deg, var(--cyan), var(--amber));
+  color: #071013;
+  background: linear-gradient(135deg, #d6f6ff, #7094a0);
   font-size: 0.74rem;
   font-weight: 900;
 }
@@ -146,6 +175,7 @@ button {
   top: min(14vh, 120px);
   left: clamp(24px, 8vw, 110px);
   width: min(360px, calc(100vw - 48px));
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -177,9 +207,9 @@ button {
   position: fixed;
   z-index: 5;
   left: 50%;
-  bottom: 28px;
+  bottom: 30px;
   display: grid;
-  width: min(720px, calc(100vw - 28px));
+  width: min(430px, calc(100vw - 28px));
   transform: translateX(-50%);
   gap: 10px;
 }
@@ -188,17 +218,18 @@ button {
 .main-dock,
 .command-row,
 .quick-row {
-  border: 1px solid var(--border);
-  background: rgba(4, 13, 20, 0.64);
+  border: 1px solid rgba(117, 190, 211, 0.19);
+  background: rgba(2, 9, 13, 0.64);
   box-shadow:
-    0 18px 58px rgba(0, 0, 0, 0.42),
-    inset 0 0 22px rgba(110, 234, 255, 0.08);
-  backdrop-filter: blur(18px);
+    0 14px 46px rgba(0, 0, 0, 0.68),
+    0 0 28px rgba(84, 170, 193, 0.12),
+    inset 0 0 18px rgba(139, 207, 226, 0.08);
+  backdrop-filter: blur(20px);
 }
 
 .mode-row {
+  display: none;
   justify-self: center;
-  display: inline-grid;
   grid-template-columns: 1fr 1fr 40px;
   gap: 4px;
   padding: 4px;
@@ -232,16 +263,16 @@ button {
 }
 
 .mode-button.is-active {
-  color: #051116;
-  background: linear-gradient(135deg, var(--cyan), var(--mint));
+  color: #061014;
+  background: linear-gradient(135deg, #d9f7ff, #89b7c2);
 }
 
 .main-dock {
   display: grid;
-  grid-template-columns: 1fr 48px 1fr;
+  grid-template-columns: 1fr 46px 1fr;
   align-items: center;
-  min-height: 58px;
-  padding: 7px;
+  min-height: 52px;
+  padding: 6px;
   border-radius: 999px;
 }
 
@@ -250,22 +281,23 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 38px;
   border-radius: 999px;
-  border: 1px solid rgba(110, 234, 255, 0.22);
-  background: rgba(7, 26, 35, 0.74);
+  border: 1px solid rgba(141, 203, 220, 0.2);
+  background: linear-gradient(180deg, rgba(10, 31, 39, 0.72), rgba(3, 12, 17, 0.78));
 }
 
 .status-pill {
   justify-self: stretch;
   gap: 10px;
   padding: 0 18px;
-  color: rgba(238, 248, 255, 0.8);
+  color: rgba(224, 243, 249, 0.74);
+  font-size: 0.88rem;
 }
 
 .status-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: var(--cyan);
   box-shadow: 0 0 18px var(--cyan);
@@ -289,20 +321,24 @@ button {
 
 .power-button {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   justify-self: center;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  color: #061014;
-  background: linear-gradient(135deg, var(--cyan), var(--amber));
+  color: rgba(221, 247, 255, 0.86);
+  background:
+    radial-gradient(circle, rgba(122, 196, 216, 0.32), rgba(7, 20, 27, 0.86) 62%),
+    rgba(4, 12, 18, 0.86);
+  box-shadow: inset 0 0 18px rgba(157, 224, 239, 0.16);
   cursor: pointer;
 }
 
 .primary-action {
   justify-self: stretch;
-  color: #eafcff;
+  color: rgba(224, 243, 249, 0.74);
+  font-size: 0.88rem;
   cursor: pointer;
 }
 
@@ -310,9 +346,28 @@ button {
   display: grid;
   grid-template-columns: 28px 1fr 74px;
   align-items: center;
-  min-height: 48px;
-  padding: 5px 6px 5px 16px;
+  min-height: 44px;
+  max-height: 0;
+  padding: 0 6px 0 16px;
   border-radius: 8px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    padding 180ms ease,
+    transform 180ms ease;
+}
+
+.control-shell:hover .command-row,
+.control-shell:focus-within .command-row {
+  max-height: 48px;
+  padding-block: 5px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .command-row svg {
@@ -354,8 +409,27 @@ button {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 7px;
-  padding: 7px;
+  max-height: 0;
+  padding: 0 7px;
   border-radius: 8px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    padding 180ms ease,
+    transform 180ms ease;
+}
+
+.control-shell:hover .quick-row,
+.control-shell:focus-within .quick-row {
+  max-height: 52px;
+  padding-block: 7px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .quick-row button {
@@ -383,9 +457,15 @@ button {
   max-height: min(54vh, 430px);
   padding: 12px;
   overflow: hidden;
-  border-left: 1px solid rgba(110, 234, 255, 0.26);
-  background: linear-gradient(90deg, rgba(4, 14, 22, 0.72), rgba(4, 14, 22, 0.28));
+  border-left: 1px solid rgba(110, 180, 200, 0.1);
+  background: linear-gradient(90deg, rgba(3, 12, 17, 0.24), rgba(3, 12, 17, 0.06));
   backdrop-filter: blur(14px);
+  opacity: 0.08;
+  transition: opacity 180ms ease;
+}
+
+.event-log:hover {
+  opacity: 0.82;
 }
 
 .event-log-header {
@@ -437,7 +517,7 @@ button {
   position: fixed;
   z-index: 6;
   left: 24px;
-  bottom: 288px;
+  bottom: 108px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -446,9 +526,15 @@ button {
   border: 1px solid rgba(255, 200, 90, 0.28);
   border-radius: 8px;
   color: rgba(255, 236, 185, 0.86);
-  background: rgba(28, 17, 3, 0.56);
+  background: rgba(28, 17, 3, 0.34);
   backdrop-filter: blur(14px);
   font-size: 0.78rem;
+  opacity: 0.18;
+  transition: opacity 180ms ease;
+}
+
+.config-note:hover {
+  opacity: 0.92;
 }
 
 .config-backdrop {
@@ -622,7 +708,7 @@ button {
 
   .control-shell {
     bottom: 14px;
-    width: calc(100vw - 18px);
+    width: min(430px, calc(100vw - 18px));
   }
 
   .mode-button {
