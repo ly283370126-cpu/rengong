@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { buildRealtimeSessionConfig } from "../lib/assistantPrompt";
+import { createDeepSeekChat, deepseekConfigured, deepseekModel } from "./deepseekClient";
 import { openaiFetch, openaiNetworkStatus } from "./openaiClient";
 import { allowedApps, executeTool, urlShortcuts } from "./tools";
 
@@ -27,8 +28,22 @@ function realtimeVoice() {
 
 const configSchema = z.object({
   openaiApiKey: z.string().optional(),
+  deepseekApiKey: z.string().optional(),
+  deepseekModel: z.string().min(1).optional(),
   realtimeModel: z.string().min(1).optional(),
   realtimeVoice: z.string().min(1).optional()
+});
+
+const chatSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant", "system"]),
+        content: z.string().min(1)
+      })
+    )
+    .min(1),
+  memories: z.array(z.string()).optional().default([])
 });
 
 function masked(value?: string) {
@@ -76,6 +91,8 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    deepseekConfigured: deepseekConfigured(),
+    deepseekModel: deepseekModel(),
     realtimeModel: realtimeModel(),
     voice: realtimeVoice(),
     openaiProxyConfigured: network.proxyConfigured,
@@ -90,7 +107,10 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/config", (_req, res) => {
   res.json({
     openaiApiKeyMasked: masked(process.env.OPENAI_API_KEY),
+    deepseekApiKeyMasked: masked(process.env.DEEPSEEK_API_KEY),
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    deepseekConfigured: deepseekConfigured(),
+    deepseekModel: deepseekModel(),
     realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
     realtimeVoice: process.env.OPENAI_REALTIME_VOICE ?? "marin",
     envPath
@@ -107,6 +127,12 @@ app.put("/api/config", async (req, res) => {
   const values: Record<string, string> = {};
   if (parsed.data.openaiApiKey?.trim()) {
     values.OPENAI_API_KEY = parsed.data.openaiApiKey.trim();
+  }
+  if (parsed.data.deepseekApiKey?.trim()) {
+    values.DEEPSEEK_API_KEY = parsed.data.deepseekApiKey.trim();
+  }
+  if (parsed.data.deepseekModel?.trim()) {
+    values.DEEPSEEK_MODEL = parsed.data.deepseekModel.trim();
   }
   if (parsed.data.realtimeModel?.trim()) {
     values.OPENAI_REALTIME_MODEL = parsed.data.realtimeModel.trim();
@@ -141,6 +167,36 @@ app.post("/api/config/test-openai", async (_req, res) => {
   }
 
   res.json({ ok: true, status: response.status, message: "OpenAI Key 可用。" });
+});
+
+app.post("/api/config/test-deepseek", async (_req, res) => {
+  const result = await createDeepSeekChat([
+    { role: "user", content: "用一句中文回复：连接正常。" }
+  ]);
+
+  if (!result.ok) {
+    res.status(400).json({
+      ok: false,
+      message: result.error ?? "DeepSeek Key 不可用。"
+    });
+    return;
+  }
+
+  res.json({ ok: true, model: result.model, message: "DeepSeek Key 可用。" });
+});
+
+app.post("/api/chat", async (req, res) => {
+  const parsed = chatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: parsed.error.issues.map((issue) => issue.message).join("; ") });
+    return;
+  }
+
+  const result = await createDeepSeekChat(parsed.data.messages, {
+    memories: parsed.data.memories
+  });
+
+  res.status(result.ok ? 200 : 400).json(result);
 });
 
 app.post("/api/tools/execute", async (req, res) => {

@@ -10,25 +10,25 @@ interface JarvisHudProps {
 }
 
 const modeLabel: Record<AssistantMode, string> = {
-  demo: "Local",
-  realtime: "Realtime"
+  demo: "本地",
+  realtime: "实时"
 };
 
 const statusLabel: Record<AssistantStatus, string> = {
-  idle: "Idle",
-  connecting: "Linking",
-  listening: "Listening",
-  thinking: "Resolving",
-  speaking: "Speaking",
-  executing_tool: "Tooling",
-  error: "Fault"
+  idle: "待命",
+  connecting: "连接中",
+  listening: "聆听",
+  thinking: "思考",
+  speaking: "回应",
+  executing_tool: "工具",
+  error: "异常"
 };
 
 export function JarvisHud({ mode, status, openaiConfigured, active, model, voice }: JarvisHudProps) {
-  const runtimeState = active ? "Active" : "Standby";
-  const linkState = openaiConfigured ? "OpenAI Ready" : "Local Only";
-  const modelLabel = model?.trim() || "Default";
-  const voiceLabel = voice?.trim() || "Default";
+  const runtimeState = active ? "在线" : "待命";
+  const linkState = openaiConfigured ? "OpenAI 就绪" : "本地模式";
+  const modelLabel = model?.trim() || "默认";
+  const voiceLabel = voice?.trim() || "默认";
 
   return (
     <section
@@ -39,13 +39,13 @@ export function JarvisHud({ mode, status, openaiConfigured, active, model, voice
       aria-label="Assistant telemetry HUD"
     >
       <div className="jarvis-hud__corner jarvis-hud__corner--north-west" aria-label="Runtime telemetry">
-        <HudMetric label="Core" value={runtimeState} tone={active ? "live" : "muted"} />
-        <HudMetric label="Mode" value={modeLabel[mode]} />
+        <HudMetric label="核心" value={runtimeState} tone={active ? "live" : "muted"} />
+        <HudMetric label="模式" value={modeLabel[mode]} />
       </div>
 
       <div className="jarvis-hud__corner jarvis-hud__corner--north-east" aria-label="Connection telemetry">
-        <HudMetric label="Link" value={linkState} tone={openaiConfigured ? "live" : "muted"} />
-        <HudMetric label="Status" value={statusLabel[status]} tone={status === "error" ? "alert" : undefined} />
+        <HudMetric label="连接" value={linkState} tone={openaiConfigured ? "live" : "muted"} />
+        <HudMetric label="状态" value={statusLabel[status]} tone={status === "error" ? "alert" : undefined} />
       </div>
 
       <div className="jarvis-hud__scan" aria-hidden="true">
@@ -65,13 +65,13 @@ export function JarvisHud({ mode, status, openaiConfigured, active, model, voice
       </div>
 
       <div className="jarvis-hud__corner jarvis-hud__corner--south-west" aria-label="Model telemetry">
-        <HudMetric label="Model" value={modelLabel} />
-        <HudMetric label="Voice" value={voiceLabel} />
+        <HudMetric label="模型" value={modelLabel} />
+        <HudMetric label="声音" value={voiceLabel} />
       </div>
 
       <div className="jarvis-hud__corner jarvis-hud__corner--south-east" aria-label="Signal telemetry">
-        <HudMetric label="Input" value={active ? "Armed" : "Quiet"} tone={active ? "live" : "muted"} />
-        <HudMetric label="Output" value={status === "speaking" ? "Live" : "Clear"} tone={status === "speaking" ? "live" : undefined} />
+        <HudMetric label="输入" value={active ? "已激活" : "静默"} tone={active ? "live" : "muted"} />
+        <HudMetric label="输出" value={status === "speaking" ? "播报" : "清晰"} tone={status === "speaking" ? "live" : undefined} />
       </div>
     </section>
   );

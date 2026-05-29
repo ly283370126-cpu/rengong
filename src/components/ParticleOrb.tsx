@@ -219,35 +219,35 @@ export function ParticleOrb({ status, audioLevel, audioAnalysis }: ParticleOrbPr
 
     const innerMaterial = new THREE.PointsMaterial({
       size: 0.015,
-      color: 0xd7f4ff,
+      color: 0x3f4856,
       transparent: true,
-      opacity: 0.76,
+      opacity: 0.7,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
     const latticeMaterial = new THREE.PointsMaterial({
       size: 0.012,
-      color: 0x75d7ff,
+      color: 0x667085,
       transparent: true,
-      opacity: 0.34,
+      opacity: 0.46,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
     const coronaMaterial = new THREE.PointsMaterial({
       size: 0.01,
-      color: 0x2ed3ff,
+      color: 0x8a94a6,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.34,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
     const dustMaterial = new THREE.PointsMaterial({
       size: 0.007,
-      color: 0xe4a95f,
+      color: 0x737985,
       transparent: true,
-      opacity: 0.13,
+      opacity: 0.22,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
 
     const innerPoints = new THREE.Points(innerGeometry, innerMaterial);
@@ -258,22 +258,22 @@ export function ParticleOrb({ status, audioLevel, audioAnalysis }: ParticleOrbPr
 
     const glowGeometry = new THREE.RingGeometry(2.31, 2.35, 224);
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0xa4ecff,
+      color: 0x64748b,
       transparent: true,
-      opacity: 0.065,
+      opacity: 0.055,
       side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
     const ring = new THREE.Mesh(glowGeometry, glowMaterial);
     orbGroup.add(ring);
 
     const rimGeometry = new THREE.RingGeometry(2.68, 2.76, 224);
     const rimMaterial = new THREE.MeshBasicMaterial({
-      color: 0x3fdcff,
+      color: 0x525866,
       transparent: true,
-      opacity: 0.035,
+      opacity: 0.05,
       side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending
     });
     const rim = new THREE.Mesh(rimGeometry, rimMaterial);
     rim.rotation.x = Math.PI * 0.5;
@@ -380,16 +380,16 @@ export function ParticleOrb({ status, audioLevel, audioAnalysis }: ParticleOrbPr
       ring.scale.setScalar(1 + intensity * 0.024 + level * 0.055);
       rim.scale.setScalar(1 + intensity * 0.035 + bands.treble * 0.08);
 
-      innerMaterial.opacity = 0.58 + intensity * 0.2 + Math.max(level, bands.bass) * 0.16;
-      latticeMaterial.opacity = 0.2 + intensity * 0.17 + bands.mid * 0.22;
-      coronaMaterial.opacity = 0.08 + intensity * 0.16 + Math.max(level, bands.treble) * 0.26;
-      dustMaterial.opacity = 0.035 + intensity * 0.075 + bands.treble * 0.16;
+      innerMaterial.opacity = 0.58 + intensity * 0.2 + Math.max(level, bands.bass) * 0.14;
+      latticeMaterial.opacity = 0.32 + intensity * 0.16 + bands.mid * 0.16;
+      coronaMaterial.opacity = 0.16 + intensity * 0.13 + Math.max(level, bands.treble) * 0.16;
+      dustMaterial.opacity = 0.09 + intensity * 0.07 + bands.treble * 0.1;
       innerMaterial.size = 0.012 + intensity * 0.004 + bands.mid * 0.006;
       latticeMaterial.size = 0.008 + intensity * 0.004 + Math.max(bands.bass, bands.mid) * 0.006;
       coronaMaterial.size = 0.005 + intensity * 0.006 + bands.treble * 0.014;
       dustMaterial.size = 0.0035 + bands.treble * 0.009 + level * 0.004;
-      glowMaterial.opacity = 0.02 + intensity * 0.06 + Math.max(level, bands.bass) * 0.1;
-      rimMaterial.opacity = 0.016 + intensity * 0.05 + bands.treble * 0.09;
+      glowMaterial.opacity = 0.035 + intensity * 0.045 + Math.max(level, bands.bass) * 0.06;
+      rimMaterial.opacity = 0.028 + intensity * 0.04 + bands.treble * 0.06;
 
       renderer.render(scene, camera);
       raf = requestAnimationFrame(animate);

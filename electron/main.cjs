@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, session, shell } = require("electron");
 const path = require("node:path");
 const { startLocalServer } = require("./local-server.cjs");
 
@@ -11,8 +11,8 @@ async function createWindow() {
     height: 780,
     minWidth: 390,
     minHeight: 720,
-    title: "Voice Orb Assistant",
-    backgroundColor: "#02070c",
+    title: "星灵桌面智能",
+    backgroundColor: "#f8fbff",
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -42,6 +42,10 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(permission === "media" || permission === "mediaKeySystem");
+  });
+
   void createWindow().catch((error) => {
     dialog.showErrorBox("Voice Orb Assistant 启动失败", error instanceof Error ? error.message : String(error));
     app.quit();

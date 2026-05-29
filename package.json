@@ -1,5 +1,5 @@
 {
-  "name": "voice-orb-assistant",
+  "name": "xingling-desktop-ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "local.voice-orb-assistant",
-    "productName": "Voice Orb Assistant",
+    "productName": "星灵桌面智能",
     "directories": {
       "output": "release"
     },

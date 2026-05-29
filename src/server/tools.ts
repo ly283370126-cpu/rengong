@@ -163,7 +163,14 @@ async function openWhitelistedApp(app: keyof typeof allowedApps) {
   const spec = allowedApps[app];
 
   if (system === "win32") {
-    await execFileAsync(spec.win32, []);
+    await execFileAsync("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "Start-Process -FilePath $args[0]",
+      spec.win32
+    ]);
     return spec.label;
   }
 

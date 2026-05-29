@@ -1,16 +1,20 @@
-import { Bot, CalendarClock, Calculator, Globe2, Mic, Power, Radio, Settings, Square, TerminalSquare } from "lucide-react";
-import type { AssistantMode, AssistantStatus } from "../types/realtime";
+import {
+  Bot,
+  CalendarClock,
+  Calculator,
+  Globe2,
+  Mic,
+  SendHorizontal,
+  Settings,
+  TerminalSquare
+} from "lucide-react";
+import type { AssistantStatus } from "../types/realtime";
 
 interface ControlDockProps {
-  mode: AssistantMode;
   status: AssistantStatus;
-  openaiConfigured: boolean;
   active: boolean;
   command: string;
-  onModeChange(mode: AssistantMode): void;
   onCommandChange(value: string): void;
-  onStart(): void;
-  onStop(): void;
   onSend(): void;
   onQuick(text: string): void;
   onSettings(): void;
@@ -27,64 +31,24 @@ const statusLabel: Record<AssistantStatus, string> = {
 };
 
 export function ControlDock({
-  mode,
   status,
-  openaiConfigured,
   active,
   command,
-  onModeChange,
   onCommandChange,
-  onStart,
-  onStop,
   onSend,
   onQuick,
   onSettings
 }: ControlDockProps) {
   return (
-    <section className="control-shell" aria-label="中文语音助手控制台">
-      <div className="mode-row" role="tablist" aria-label="运行模式">
-        <button
-          className={mode === "demo" ? "mode-button is-active" : "mode-button"}
-          type="button"
-          onClick={() => onModeChange("demo")}
-          aria-pressed={mode === "demo"}
-        >
-          <Bot size={16} />
-          <span>本地核心</span>
-        </button>
-        <button
-          className={mode === "realtime" ? "mode-button is-active" : "mode-button"}
-          type="button"
-          onClick={() => onModeChange("realtime")}
-          aria-pressed={mode === "realtime"}
-          title={openaiConfigured ? "使用 OpenAI Realtime" : "需要在 .env 配置 OPENAI_API_KEY"}
-        >
-          <Radio size={16} />
-          <span>实时模型</span>
-        </button>
-        <button className="icon-mode-button" type="button" onClick={onSettings} aria-label="打开设置" title="设置">
-          <Settings size={16} />
-        </button>
-      </div>
-
+    <section className="control-shell" aria-label="星灵桌面智能控制台">
       <div className="main-dock">
         <div className={`status-pill status-${status}`}>
           <span className="status-dot" />
-          <strong>{statusLabel[status]}</strong>
+          <strong>{active ? `语音${statusLabel[status]}` : "语音待命"}</strong>
         </div>
 
-        <button
-          className="power-button"
-          type="button"
-          onClick={active ? onStop : onStart}
-          aria-label={active ? "结束会话" : "启动会话"}
-          title={active ? "结束会话" : "启动会话"}
-        >
-          {active ? <Square size={19} /> : <Power size={19} />}
-        </button>
-
-        <button className="primary-action" type="button" onClick={active ? onStop : onStart}>
-          {active ? "结束会话" : "启动贾维斯"}
+        <button className="icon-mode-button" type="button" onClick={onSettings} aria-label="打开设置" title="设置">
+          <Settings size={16} />
         </button>
       </div>
 
@@ -99,19 +63,15 @@ export function ControlDock({
         <input
           value={command}
           onChange={(event) => onCommandChange(event.target.value)}
-          placeholder="输入中文指令，例如：贾维斯，今天几号？"
+          placeholder="输入中文指令，例如：星灵，今天几号？"
           aria-label="中文测试指令"
         />
-        <button type="submit" disabled={!command.trim()}>
-          发送
+        <button type="submit" disabled={!command.trim()} aria-label="发送指令" title="发送">
+          <SendHorizontal size={17} />
         </button>
       </form>
 
       <div className="quick-row" aria-label="快捷中文测试">
-        <button type="button" onClick={() => onQuick("贾维斯，在吗？")}>
-          <Radio size={15} />
-          <span>唤醒</span>
-        </button>
         <button type="button" onClick={() => onQuick("你的名字是什么？")}>
           <Bot size={15} />
           <span>名字</span>

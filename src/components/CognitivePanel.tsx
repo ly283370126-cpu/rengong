@@ -5,20 +5,23 @@ import type { LogEntry } from "../types/realtime";
 interface CognitivePanelProps {
   entries: LogEntry[];
   openaiConfigured: boolean;
+  deepseekConfigured?: boolean;
   proxyConfigured?: boolean;
   active: boolean;
 }
 
 const capabilities = [
   "中文语音",
+  "文字交互",
   "工具调度",
   "网页启动",
   "应用控制",
+  "本地备忘",
   "日程草稿",
   "实时模型"
 ];
 
-export function CognitivePanel({ entries, openaiConfigured, proxyConfigured, active }: CognitivePanelProps) {
+export function CognitivePanel({ entries, openaiConfigured, deepseekConfigured, proxyConfigured, active }: CognitivePanelProps) {
   const traces = entries.slice(-4).reverse();
 
   return (
@@ -29,8 +32,13 @@ export function CognitivePanel({ entries, openaiConfigured, proxyConfigured, act
       </div>
 
       <div className="cognitive-panel__status-grid">
-        <StatusChip icon={<Activity size={13} />} label="循环" value={active ? "已武装" : "待命"} live={active} />
-        <StatusChip icon={<Network size={13} />} label="模型" value={openaiConfigured ? "已配置" : "本地"} live={openaiConfigured} />
+        <StatusChip icon={<Activity size={13} />} label="会话" value={active ? "在线" : "待命"} live={active} />
+        <StatusChip
+          icon={<Network size={13} />}
+          label="大脑"
+          value={deepseekConfigured ? "DeepSeek" : openaiConfigured ? "OpenAI" : "本地"}
+          live={deepseekConfigured || openaiConfigured}
+        />
         <StatusChip icon={<Cpu size={13} />} label="代理" value={proxyConfigured ? "已连接" : "直连"} live={proxyConfigured} />
       </div>
 

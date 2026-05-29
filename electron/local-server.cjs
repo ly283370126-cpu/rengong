@@ -79,8 +79,16 @@ async function openWhitelistedApp(app) {
   const spec = allowedApps[app];
   if (!spec) throw new Error(`应用不在白名单里：${app}`);
   const system = platform();
-  if (system === "win32") await execFileAsync(spec.win32, []);
-  else if (system === "darwin") await execFileAsync("open", ["-a", spec.darwin]);
+  if (system === "win32") {
+    await execFileAsync("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "Start-Process -FilePath $args[0]",
+      spec.win32
+    ]);
+  } else if (system === "darwin") await execFileAsync("open", ["-a", spec.darwin]);
   else await execFileAsync(spec.linux, []);
   return spec.label;
 }
@@ -141,9 +149,66 @@ function buildAssistantInstructions() {
     "你叫星灵，是一个中文实时语音桌面助手。",
     `当前中国时间是：${date}。回答今天日期时必须使用这个时间，不要凭记忆猜。`,
     "用户说“星灵”是在唤醒你；唤醒后简短回应，等待下一句。",
+    "用户可以通过文字或语音与你交互。",
     "用户让你打开网页、本机应用、文件、搜索网页或创建日程时，优先调用工具。",
     "你不能执行没有白名单的应用，也不能构造任意 shell 命令。"
   ].join("\n");
+}
+
+function deepseekModel() {
+  return process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+}
+
+function buildVoiceChatInstructions() {
+  const date = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    dateStyle: "full",
+    timeStyle: "short"
+  }).format(new Date());
+  return [
+    "你叫星灵，是用户桌面端的中文语音 AI 伙伴。",
+    `当前中国时间是：${date}。涉及今天、现在、日期、星期时，以这个时间为准。`,
+    "你的主要输出会被语音朗读，所以要像真实对话一样自然、温柔、短一点。",
+    "你的气质是冷静、聪明、轻声、可靠的桌面 AI，像电影里成熟的人工智能助手那样克制，不夸张、不尖锐、不卖萌。",
+    "默认不要用“宝贝”“亲爱的”“主人”等亲昵称呼，除非用户先明确要求。",
+    "少说术语，不要自称模型、系统、核心。不要用列表堆满屏幕，除非用户明确要步骤。",
+    "默认用一到三句话回答。能直接给结论就先给结论，再补一句贴心的下一步。",
+    "如果用户语气轻松，你也可以轻松一点；如果用户着急，先安抚，再处理。",
+    "用户让你打开网页、应用、文件、搜索或建日程时，前端会先走本地工具；你只需要自然说明结果或给建议。"
+  ].join("\n");
+}
+
+async function createDeepSeekChat(messages, memories = []) {
+  if (!process.env.DEEPSEEK_API_KEY) return { ok: false, error: "DEEPSEEK_API_KEY 未配置。" };
+  const memoryPrompt = memories.length
+    ? `\n\n用户让我记住的本地备忘：\n${memories.map((item) => `- ${item}`).join("\n")}`
+    : "";
+  const model = deepseekModel();
+  const response = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: `${buildVoiceChatInstructions()}${memoryPrompt}` },
+        ...messages.slice(-12)
+      ],
+      thinking: { type: "disabled" },
+      max_tokens: 420,
+      temperature: 0.8,
+      stream: false
+    })
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    return { ok: false, model, error: payload?.error?.message || response.statusText };
+  }
+  const text = payload?.choices?.[0]?.message?.content?.trim();
+  if (!text) return { ok: false, model, error: "DeepSeek 没有返回可读内容。" };
+  return { ok: true, model, text };
 }
 
 const realtimeTools = [
@@ -201,6 +266,8 @@ function startLocalServer({ port, staticDir, envDir }) {
     res.json({
       ok: true,
       openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      deepseekConfigured: Boolean(process.env.DEEPSEEK_API_KEY),
+      deepseekModel: deepseekModel(),
       realtimeModel: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
       voice: process.env.OPENAI_REALTIME_VOICE || "marin",
       allowedApps: Object.keys(allowedApps),
@@ -213,7 +280,10 @@ function startLocalServer({ port, staticDir, envDir }) {
   app.get("/api/config", (_req, res) => {
     res.json({
       openaiApiKeyMasked: masked(process.env.OPENAI_API_KEY),
+      deepseekApiKeyMasked: masked(process.env.DEEPSEEK_API_KEY),
       openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      deepseekConfigured: Boolean(process.env.DEEPSEEK_API_KEY),
+      deepseekModel: deepseekModel(),
       realtimeModel: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
       realtimeVoice: process.env.OPENAI_REALTIME_VOICE || "marin",
       envPath
@@ -223,6 +293,8 @@ function startLocalServer({ port, staticDir, envDir }) {
   app.put("/api/config", async (req, res) => {
     const values = {};
     if (req.body.openaiApiKey) values.OPENAI_API_KEY = String(req.body.openaiApiKey).trim();
+    if (req.body.deepseekApiKey) values.DEEPSEEK_API_KEY = String(req.body.deepseekApiKey).trim();
+    if (req.body.deepseekModel) values.DEEPSEEK_MODEL = String(req.body.deepseekModel).trim();
     if (req.body.realtimeModel) values.OPENAI_REALTIME_MODEL = String(req.body.realtimeModel).trim();
     if (req.body.realtimeVoice) values.OPENAI_REALTIME_VOICE = String(req.body.realtimeVoice).trim();
     await writeEnvValues(envPath, values);
@@ -237,6 +309,20 @@ function startLocalServer({ port, staticDir, envDir }) {
       return res.status(400).json({ ok: false, status: response.status, message: payload?.error?.message || response.statusText });
     }
     res.json({ ok: true, status: response.status, message: "OpenAI Key 可用。" });
+  });
+
+  app.post("/api/config/test-deepseek", async (_req, res) => {
+    const result = await createDeepSeekChat([{ role: "user", content: "用一句中文回复：连接正常。" }]);
+    if (!result.ok) return res.status(400).json({ ok: false, message: result.error || "DeepSeek Key 不可用。" });
+    res.json({ ok: true, model: result.model, message: "DeepSeek Key 可用。" });
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const memories = Array.isArray(req.body?.memories) ? req.body.memories : [];
+    if (!messages.length) return res.status(400).json({ ok: false, error: "messages 不能为空。" });
+    const result = await createDeepSeekChat(messages, memories);
+    res.status(result.ok ? 200 : 400).json(result);
   });
 
   app.post("/api/tools/execute", async (req, res) => {

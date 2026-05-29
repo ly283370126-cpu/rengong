@@ -1,15 +1,19 @@
+import { Trash2 } from "lucide-react";
 import type { LogEntry } from "../types/realtime";
 
 interface EventLogProps {
   entries: LogEntry[];
+  onClear(): void;
 }
 
-export function EventLog({ entries }: EventLogProps) {
+export function EventLog({ entries, onClear }: EventLogProps) {
   return (
-    <aside className="event-log" aria-label="Conversation event log">
+    <aside className="event-log" aria-label="对话记录">
       <div className="event-log-header">
-        <span>Live Trace</span>
-        <strong>{entries.length}</strong>
+        <span>对话记录</span>
+        <button type="button" onClick={onClear} aria-label="清空对话记录" title="清空">
+          <Trash2 size={14} />
+        </button>
       </div>
       <div className="event-log-list">
         {entries.slice(-8).map((entry) => (

@@ -20,6 +20,8 @@ export type ToolName =
 export interface AppStatus {
   ok: boolean;
   openaiConfigured: boolean;
+  deepseekConfigured?: boolean;
+  deepseekModel?: string;
   realtimeModel: string;
   voice: string;
   allowedApps: string[];
@@ -32,6 +34,8 @@ export interface AppStatus {
 
 export interface AppConfig {
   openaiApiKey: string;
+  deepseekApiKey: string;
+  deepseekModel: string;
   realtimeModel: string;
   realtimeVoice: string;
 }

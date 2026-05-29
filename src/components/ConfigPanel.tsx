@@ -9,7 +9,10 @@ interface ConfigPanelProps {
 
 interface ConfigPayload {
   openaiApiKeyMasked: string;
+  deepseekApiKeyMasked: string;
   openaiConfigured: boolean;
+  deepseekConfigured: boolean;
+  deepseekModel: string;
   realtimeModel: string;
   realtimeVoice: string;
   envPath: string;
@@ -24,6 +27,8 @@ type ConfigResponse = {
 export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
   const [config, setConfig] = useState<ConfigPayload | null>(null);
   const [key, setKey] = useState("");
+  const [deepseekKey, setDeepseekKey] = useState("");
+  const [deepseekModel, setDeepseekModel] = useState("deepseek-v4-flash");
   const [model, setModel] = useState("gpt-realtime");
   const [voice, setVoice] = useState("marin");
   const [message, setMessage] = useState("");
@@ -36,11 +41,13 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
       .then((response) => response.json())
       .then((payload: ConfigPayload) => {
         setConfig(payload);
+        setDeepseekModel(payload.deepseekModel);
         setModel(payload.realtimeModel);
         setVoice(payload.realtimeVoice);
         setKey("");
+        setDeepseekKey("");
       })
-      .catch(() => setMessage("Unable to read local configuration."));
+      .catch(() => setMessage("无法读取本地配置。"));
   }, [open]);
 
   if (!open) return null;
@@ -54,13 +61,15 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           openaiApiKey: key,
+          deepseekApiKey: deepseekKey,
+          deepseekModel,
           realtimeModel: model,
           realtimeVoice: voice
         })
       });
       const payload = (await response.json()) as ConfigResponse;
       if (!response.ok) throw new Error(payload.error ?? "Save failed");
-      setMessage("Configuration saved locally.");
+      setMessage("配置已保存到本机。");
       setKey("");
       onSaved();
     } catch (error) {
@@ -77,7 +86,22 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
       if (key.trim()) await save();
       const response = await fetch("/api/config/test-openai", { method: "POST" });
       const payload = (await response.json()) as ConfigResponse;
-      setMessage(payload.message ?? (payload.ok ? "Key is usable." : "Key is not usable."));
+      setMessage(payload.message ?? (payload.ok ? "Key 可用。" : "Key 不可用。"));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testDeepSeek() {
+    setBusy(true);
+    setMessage("");
+    try {
+      if (deepseekKey.trim()) await save();
+      const response = await fetch("/api/config/test-deepseek", { method: "POST" });
+      const payload = (await response.json()) as ConfigResponse;
+      setMessage(payload.message ?? (payload.ok ? "DeepSeek Key 可用。" : "DeepSeek Key 不可用。"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -86,17 +110,36 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
   }
 
   return (
-    <div className="config-backdrop" role="dialog" aria-modal="true" aria-label="Assistant settings">
+    <div className="config-backdrop" role="dialog" aria-modal="true" aria-label="助手设置">
       <section className="config-panel">
         <div className="config-panel-header">
           <div>
             <Settings size={18} />
-            <strong>Assistant Settings</strong>
+            <strong>助手设置</strong>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close settings">
+          <button type="button" onClick={onClose} aria-label="关闭设置" title="关闭">
             <X size={18} />
           </button>
         </div>
+
+        <label className="config-field">
+          <span>DeepSeek API Key</span>
+          <div className="key-input">
+            <KeyRound size={16} />
+            <input
+              type="password"
+              value={deepseekKey}
+              onChange={(event) => setDeepseekKey(event.target.value)}
+              placeholder={config?.deepseekConfigured ? `已配置：${config.deepseekApiKeyMasked}` : "粘贴 DeepSeek Key"}
+              autoComplete="off"
+            />
+          </div>
+        </label>
+
+        <label className="config-field">
+          <span>DeepSeek 模型</span>
+          <input value={deepseekModel} onChange={(event) => setDeepseekModel(event.target.value)} />
+        </label>
 
         <label className="config-field">
           <span>OpenAI API Key</span>
@@ -106,7 +149,7 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
               type="password"
               value={key}
               onChange={(event) => setKey(event.target.value)}
-              placeholder={config?.openaiConfigured ? `Configured: ${config.openaiApiKeyMasked}` : "Paste sk-..."}
+              placeholder={config?.openaiConfigured ? `已配置：${config.openaiApiKeyMasked}` : "粘贴 sk-..."}
               autoComplete="off"
             />
           </div>
@@ -114,11 +157,11 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
 
         <div className="config-grid">
           <label className="config-field">
-            <span>Realtime Model</span>
+            <span>实时模型</span>
             <input value={model} onChange={(event) => setModel(event.target.value)} />
           </label>
           <label className="config-field">
-            <span>Voice</span>
+            <span>声音</span>
             <input value={voice} onChange={(event) => setVoice(event.target.value)} />
           </label>
         </div>
@@ -131,11 +174,14 @@ export function ConfigPanel({ open, onClose, onSaved }: ConfigPanelProps) {
         {message && <p className="config-message">{message}</p>}
 
         <div className="config-actions">
+          <button type="button" onClick={() => void testDeepSeek()} disabled={busy}>
+            测试 DeepSeek
+          </button>
           <button type="button" onClick={() => void testKey()} disabled={busy}>
-            Test key
+            测试 OpenAI
           </button>
           <button type="button" onClick={() => void save()} disabled={busy}>
-            Save settings
+            保存设置
           </button>
         </div>
       </section>

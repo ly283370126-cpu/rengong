@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleSlash2 } from "lucide-react";
 import { ControlDock } from "./components/ControlDock";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { CognitivePanel } from "./components/CognitivePanel";
 import { EventLog } from "./components/EventLog";
 import { JarvisHud } from "./components/JarvisHud";
+import { MobileVoiceGate } from "./components/MobileVoiceGate";
 import { ParticleOrb } from "./components/ParticleOrb";
 import { useAudioLevel } from "./hooks/useAudioLevel";
 import { useLocalDemo } from "./hooks/useLocalDemo";
-import { useRealtimeSession } from "./hooks/useRealtimeSession";
-import type { AppStatus, AssistantMode, AssistantStatus, LogEntry } from "./types/realtime";
+import type { AppStatus, AssistantStatus, LogEntry } from "./types/realtime";
 
 function createLog(role: LogEntry["role"], text: string): LogEntry {
   return {
@@ -21,31 +21,34 @@ function createLog(role: LogEntry["role"], text: string): LogEntry {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<AssistantMode>("demo");
   const [status, setStatus] = useState<AssistantStatus>("idle");
   const [command, setCommand] = useState("");
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const [appStatus, setAppStatus] = useState<AppStatus | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
+  const [voiceGateOpen, setVoiceGateOpen] = useState(false);
+  const voiceBootedRef = useRef(false);
   const [logs, setLogs] = useState<LogEntry[]>([
-    createLog("system", "核心已上线。本地中文助手可用；配置有效 OpenAI Key 后启用 Realtime。")
+    createLog("system", "星灵已就绪。语音对话会优先使用 DeepSeek，本地工具也在线。")
   ]);
 
   const addLog = useCallback((entry: Omit<LogEntry, "id" | "at">) => {
     setLogs((current) => [...current, createLog(entry.role, entry.text)].slice(-30));
   }, []);
 
-  const demo = useLocalDemo({ onStatus: setStatus, addLog });
-  const realtime = useRealtimeSession({
+  const clearLogs = useCallback(() => {
+    setLogs([createLog("system", "对话记录已清空。")]);
+  }, []);
+
+  const demo = useLocalDemo({
     onStatus: setStatus,
     addLog,
     onMicStream: setMicStream,
-    model: appStatus?.realtimeModel,
-    voice: appStatus?.voice
+    aiConfigured: Boolean(appStatus?.deepseekConfigured)
   });
 
   const audioAnalysis = useAudioLevel(micStream);
-  const active = mode === "demo" ? demo.active : realtime.active;
+  const active = demo.active;
 
   const refreshStatus = useCallback(() => {
     fetch("/api/health")
@@ -55,6 +58,8 @@ export default function App() {
         setAppStatus({
           ok: false,
           openaiConfigured: false,
+          deepseekConfigured: false,
+          deepseekModel: "unknown",
           realtimeModel: "unknown",
           voice: "unknown",
           allowedApps: [],
@@ -66,6 +71,23 @@ export default function App() {
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus]);
+
+  useEffect(() => {
+    if (!appStatus?.ok || voiceBootedRef.current) return;
+    voiceBootedRef.current = true;
+    const needsUserGesture =
+      window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(max-width: 620px)").matches;
+    if (needsUserGesture) {
+      setVoiceGateOpen(true);
+      return;
+    }
+    void demo.start();
+  }, [appStatus?.ok, demo]);
+
+  const allowMobileVoice = useCallback(() => {
+    setVoiceGateOpen(false);
+    void demo.start();
+  }, [demo]);
 
   const visualLevel = useMemo(() => {
     if (status === "speaking") return Math.max(audioAnalysis.level, 0.76);
@@ -85,67 +107,16 @@ export default function App() {
     return { ...audioAnalysis, level: visualLevel };
   }, [audioAnalysis, status, visualLevel]);
 
-  const stopCurrent = useCallback(() => {
-    if (demo.active) demo.stop();
-    if (realtime.active) realtime.stop();
-  }, [demo, realtime]);
-
-  const start = useCallback(async () => {
-    try {
-      stopCurrent();
-      if (mode === "demo") {
-        await demo.start();
-        return;
-      }
-
-      if (!appStatus?.openaiConfigured) {
-        setStatus("error");
-        addLog({ role: "system", text: "Realtime 需要 OPENAI_API_KEY；本地中文核心仍可使用。" });
-        return;
-      }
-
-      await realtime.start();
-    } catch (error) {
-      setStatus("error");
-      addLog({ role: "system", text: error instanceof Error ? error.message : String(error) });
-    }
-  }, [addLog, appStatus?.openaiConfigured, demo, mode, realtime, stopCurrent]);
-
-  const stop = useCallback(() => {
-    stopCurrent();
-  }, [stopCurrent]);
-
   const sendCommand = useCallback(
     async (value = command) => {
       const text = value.trim();
       if (!text) return;
       setCommand("");
 
-      if (mode === "demo") {
-        if (!demo.active) {
-          setStatus("listening");
-        }
-        await demo.submit(text);
-        return;
-      }
-
-      if (!realtime.active) {
-        addLog({ role: "system", text: "请先启动 Realtime，再发送文字或直接说话。" });
-        return;
-      }
-
-      realtime.sendText(text);
+      if (!demo.active) setStatus("listening");
+      await demo.submit(text);
     },
-    [addLog, command, demo, mode, realtime]
-  );
-
-  const changeMode = useCallback(
-    (nextMode: AssistantMode) => {
-      if (nextMode === mode) return;
-      stopCurrent();
-      setMode(nextMode);
-    },
-    [mode, stopCurrent]
+    [command, demo]
   );
 
   return (
@@ -154,7 +125,7 @@ export default function App() {
 
       <div className="ambient-grid" aria-hidden="true" />
       <JarvisHud
-        mode={mode}
+        mode="demo"
         status={status}
         openaiConfigured={Boolean(appStatus?.openaiConfigured)}
         active={active}
@@ -164,53 +135,50 @@ export default function App() {
 
       <header className="top-bar">
         <div className="brand-lockup">
-          <span className="brand-mark">J</span>
+          <span className="brand-mark">星</span>
           <div>
-            <strong>JARVIS DESKTOP</strong>
-          <span>Realtime neural interface</span>
+            <strong>星灵桌面智能</strong>
+            <span>Voice first with DeepSeek</span>
           </div>
         </div>
         <div className="system-state">
           {appStatus?.ok ? <CheckCircle2 size={16} /> : <CircleSlash2 size={16} />}
-          <span>{appStatus?.openaiConfigured ? "OpenAI Ready" : "Demo Ready"}</span>
+          <span>{appStatus?.deepseekConfigured ? "DeepSeek Ready" : appStatus?.openaiConfigured ? "OpenAI Ready" : "Voice Ready"}</span>
         </div>
       </header>
 
       <section className="hero-copy" aria-label="Assistant identity">
-        <p>JARVIS LOCAL</p>
-        <h1>Core</h1>
-        <span>中文语音、工具调度、实时粒子智能核心。</span>
+        <p>DESKTOP AI</p>
+        <h1>星灵</h1>
+        <span>中文语音对话、DeepSeek 大脑、本地工具调度。</span>
       </section>
 
-      <EventLog entries={logs} />
+      <EventLog entries={logs} onClear={clearLogs} />
       <CognitivePanel
         entries={logs}
         openaiConfigured={Boolean(appStatus?.openaiConfigured)}
+        deepseekConfigured={Boolean(appStatus?.deepseekConfigured)}
         proxyConfigured={appStatus?.openaiProxyConfigured}
         active={active}
       />
 
       <ControlDock
-        mode={mode}
         status={status}
-        openaiConfigured={Boolean(appStatus?.openaiConfigured)}
         active={active}
         command={command}
-        onModeChange={changeMode}
         onCommandChange={setCommand}
-        onStart={start}
-        onStop={stop}
         onSend={() => void sendCommand()}
         onQuick={(text) => void sendCommand(text)}
         onSettings={() => setConfigOpen(true)}
       />
 
       <ConfigPanel open={configOpen} onClose={() => setConfigOpen(false)} onSaved={refreshStatus} />
+      <MobileVoiceGate open={voiceGateOpen && !demo.active} onAllow={allowMobileVoice} onSettings={() => setConfigOpen(true)} />
 
-      {!appStatus?.openaiConfigured && (
+      {!appStatus?.deepseekConfigured && !appStatus?.openaiConfigured && (
         <div className="config-note" role="status">
           <AlertTriangle size={16} />
-          <span>Realtime 需要在 .env 中配置 OPENAI_API_KEY。</span>
+          <span>请先在设置中配置 DeepSeek Key；本地工具仍可使用。</span>
         </div>
       )}
     </main>
